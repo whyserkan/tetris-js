@@ -9,15 +9,15 @@ function clean(){
 	context.fillRect(0, 0, canvas.width, canvas.height);
 }
 
-		let colors= {
-			1: "purple",
-			2: "brown",
-			3: "teal",
-			4: "green",
-			5: "white",
-			6: "maroon",
-			7: "silver",
-		};
+let colors= {
+	1: "purple",
+	2: "brown",
+	3: "teal",
+	4: "green",
+	5: "white",
+	6: "maroon",
+	7: "silver",
+};
 
 function Block(blckParams){
 	const allBlocks = ["L","T","Z","S","O","I","J"];
@@ -65,7 +65,7 @@ function Block(blckParams){
 	
 	let coordinate = {
 		x: parseInt(canvas.width/(2*scale)-2),
-		y: -1
+		y: 0
 	};
 
 	let touchesDown = false;
@@ -83,13 +83,18 @@ function Block(blckParams){
 	};
 
 	this.move = function(x, y, allBlocks){
-		if(!this.collide(x, y, allBlocks)){
+		if(!this.collide(x, y, allBlocks) && !touchesDown){
+			console.log('not collide');
 			clean();
 			coordinate.x += x;
 			coordinate.y += y;
 			this.draw();
 			allBlocks.draw();
+
+		}else{
+			console.log('collide');
 		}
+
 	};
 
 	this.isTouchedDown = function(){
@@ -108,31 +113,32 @@ function Block(blckParams){
 	}
 
 	this.collide = function(x, y, allBlocks){
-		coordinate.x += x;
-		coordinate.y += y;		
+		if(touchesDown){
+			return true;
+		}		
+		touchesSide = false;
 		for(let i=0; i<block.length;i++){
 			for(let j=0; j<block[i].length;j++){
-				touchesSide = false;
-				touchesDown = false;
 				if(block[i][j]>0){
-					let collide = coordinate.y+i >= allBlocks.getAllRows().length || 
-							allBlocks.getAllRows()[coordinate.y+i][coordinate.x+j]>0 || 
-							coordinate.x+j < 0 ||
-							coordinate.x+j >= allBlocks.getAllRows()[i].length;
-					touchesSide = x!=0 && collide;
-					touchesDown = y>0 && collide;
-				}
+					touchesDown = coordinate.y+y+i >= allBlocks.getAllRows().length || 
+							(allBlocks.getAllRows()[coordinate.y+i][coordinate.x+x+j]==0 &&
+						     	 allBlocks.getAllRows()[coordinate.y+y+i][coordinate.x+j]>0);
+
+					if(touchesDown){
+						return true;
+					}		
+					
+					touchesSide = coordinate.x+x+j < 0 ||
+							coordinate.x+x+j == allBlocks.getAllRows()[i].length ||
+							(allBlocks.getAllRows()[coordinate.y+y+i][coordinate.x+j]==0 &&
+						     	 allBlocks.getAllRows()[coordinate.y+i][coordinate.x+x+j]>0);
+					if(touchesSide){
+						return true;
+					}		
+				}				
 				
-				
-				if(touchesDown || touchesSide){
-					coordinate.x -= x;
-					coordinate.y -= y;
-					return true;
-				}
 			}
 		}
-		coordinate.x -= x;
-		coordinate.y -= y;
 	};
 
 	this.addToBlocks = function(allBlocks) {
@@ -151,7 +157,6 @@ function AllBlocks(screen){
 	let rows = new Array(screen.height / screen.scale);
 
 	this.init = function(){
-		console.log('init');
 		for (let i = 0; i<rows.length ; i++) {
 			let line = new Array(screen.width / screen.scale);
 			for (let j = 0; j<line.length ; j++) {
@@ -179,7 +184,7 @@ function AllBlocks(screen){
 function Game(){
 	let block;
 	let allBlocks;
-	let speed = 3;
+	let speed = 2;
 	let screen = {
 		width: canvas.width,
 		height: canvas.height,
@@ -189,7 +194,6 @@ function Game(){
 	this.init = function(){
 		clean();
 		block = new Block({});
-		console.log(block);
 		block.draw();
 
 		allBlocks = new AllBlocks(screen);
@@ -200,28 +204,32 @@ function Game(){
 	this.update = function() {
 		if(!block.isTouchedDown()){
 			block.move(0,1,allBlocks);
-			
 		} else {
+			console.log('new');
 			block.addToBlocks(allBlocks);
 			block = new Block({});
 			block.draw();	
 			allBlocks.draw();
 		}
+
 	};
 	this.getSpeed = function(){
 		return speed;
 	};
 	this.assignKeys = function(){
-		window.addEventListener("keypress", function(e){
-		    if(e.keyCode == 101){
+		window.addEventListener("keydown", function(e){
+		    if(e.keyCode == 65){
 		    	block.move(-1,0,allBlocks);
 		    }
-		    if(e.keyCode == 102){
+		    if(e.keyCode == 68){
 		    	block.move(1,0,allBlocks);
 		    }
-		    if(e.keyCode == 115){
+		    /*if(e.keyCode == 115){
 		    	block.rotate();
-		    }
+		    }*/
+		    if(e.keyCode == 119){
+		    	block.move(0,1,allBlocks);
+		    }		    
 		});
 	}	
 }
@@ -235,6 +243,7 @@ function Animation(){
 	};
 	function animate(time){
 		let timeSecond = parseInt(time / 1000 * game.getSpeed());
+		
 		if (t < timeSecond){
 			game.update();
 			t = timeSecond;
